@@ -1,9 +1,9 @@
-TwitBitVisualize
+TwitBitStream
 ================
 
-Twitter to Binary Visualizer for the Raspberry Pi.
+Twitter to Raspberry Pi GPIO pins
 
-Taking advantage of the GPIOs on the RPi to display twitter data in binary.
+Taking advantage of the GPIOs on the RPi to relay twitter data in binary.
 
 
 Requirements
