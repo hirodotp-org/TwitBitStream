@@ -12,34 +12,55 @@ from GPIOControl import Controller
 from Config import Parser
 from Daemon import Daemon
 
+LOGFILE = "/tmp/twitbitstream.log"
+PIDFILE = "/tmp/twitbitstream.pid"
+
+def printLog(msg):
+	f = open(LOGFILE, 'a')
+	f.write(str(time.time()) + " " + str(msg))
+	f.close()
+
 class TwitBitListener(CustomStreamListener):
 	def __init__(self, pins, pinTimeout = 0.1):
+		super(TwitBitListener, self).__init__()
 		self.b = BinaryHandler()
 		self.gpio = Controller()
 		self.pins = pins
 		self.pinTimeout = pinTimeout
-		super(TwitBitListener, self).__init__()
+		self.listening = 0
 
 	def on_data(self, data):
-		if "text" in data:
-			tweet = json.loads(data).get("text")
-			self.b.push(tweet)
-			while True:
-				try:
-					ch = self.b.pop()
-				except:
-					break
-	
-				i = 0
-				for c in ch:
-					pin = self.pins[i]
-					if c == "1":
-						self.gpio.high(pin)
-					else:
-						self.gpio.low(pin)
-					i += 1
+		# skip first two feed messages
+		if self.listening > 1:
+			if self.listening == 2:
+				printLog("Twitter stream initialized, waiting for data.")
+				self.listening += 1
 
-				time.sleep(self.pinTimeout)
+			if "text" in data:
+				tweet = json.loads(data).get("text")
+				self.b.push(tweet)
+				while True:
+					try:
+						ch = self.b.pop()
+					except:
+						break
+	
+					i = 0
+					for c in ch:
+						pin = int(self.pins[i])
+						if c == "1":
+							self.gpio.high(int(pin))
+						elif c == "0":
+							self.gpio.low(int(pin))
+						i += 1
+
+					time.sleep(self.pinTimeout)
+
+				# reset pins to low state
+				for pin in self.pins:
+					self.gpio.low(int(pin))
+		else:
+			self.listening += 1
 
 class TwitBitStream(Daemon):
 	"""
@@ -86,13 +107,13 @@ if __name__ == "__main__":
 		pins.append(config.get('gpio', 'bit5'))
 		pins.append(config.get('gpio', 'bit6'))
 		pins.append(config.get('gpio', 'bit7'))
-	
-		t = TwitBitStream('/tmp/twitbitstream.pid')
+
+		t = TwitBitStream(PIDFILE)
 		t.setOAuthInfo(consumerKey, consumerSecret, accessToken, accessTokenSecret, pins)
 		t.start()
 		sys.exit(0)
 	except Exception, e:
-		f = open('/tmp/twitbitstream.log', 'a')
+		f = open(LOGFILE, 'a')
 		f.write('-'*60 + '\n')
 		traceback.print_exc(file=f)
 		f.close()

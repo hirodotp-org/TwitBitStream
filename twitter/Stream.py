@@ -4,11 +4,7 @@ import time
 import tweepy
 
 class CustomStreamListener(tweepy.StreamListener):
-	def on_error(self, status):
-		if status == "401":
-			print "Received unauthorized response code, retrying in 3 seconds..."
-			time.sleep(3)
-			self.login()
+	pass
 
 class TwitterStreamClient:
 	def __init__(self, ck, cs, at, ats):
